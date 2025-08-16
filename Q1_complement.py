@@ -2,13 +2,14 @@ import pandas as pd
 import numpy as np
 
 # 读取数据
-df = pd.read_excel('第2周C题：接触式轮廓仪的自动标注(2020年D题)/附件1_工件1的测量数据.xlsx', sheet_name='level')
+df = pd.read_excel('Figures/工件1_down_new.xlsx')
 
 # 读取x列数据
 x = df['x']
 
 # 选取区间内部的点
-start, end = 57.5009, 59.7754
+points_x=[(51.71590531, 54.62098921),(59.59006041,61.68709433),(66.66597425,68.75222298)]
+start, end = points_x[2]
 start_idx = np.searchsorted(x, start, side='left')
 end_idx = np.searchsorted(x, end, side='right')
 

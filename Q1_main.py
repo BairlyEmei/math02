@@ -17,7 +17,7 @@ plt.rcParams['axes.unicode_minus'] = False
 os.makedirs('Figures', exist_ok=True)
 
 #区间数据读取器
-def data_reader(start,end):
+def data_reader(start,end,df):
     # 读取数据
     x = df['x']
     #选取区间内部的点
@@ -59,7 +59,7 @@ def line_intersection(line1, line2, tol=1e-6):
     z = (A2 * C1 - A1 * C2) / det
     return (x, z)
 
-def line_circle_intersection(line, circle, tol=0.5):
+def line_circle_intersection(line, circle, tol=0.7):
     """
     计算直线与圆的交点
     :param line: 直线参数 (A, B, C)=(slope,-1,intercept) 表示 Ax + Bz + C = 0
@@ -93,24 +93,28 @@ def line_circle_intersection(line, circle, tol=0.5):
     c_eq = h ** 2 + (c - k) ** 2 - r ** 2
     # 计算判别式
     delta = b ** 2 - 4 * a * c_eq
+    print('delta=',delta)
     if delta < -tol:
+        print("无交点")
         return ()  # 无交点
     elif abs(delta) < tol:
-        # 相切
+        print("相切")
         x = -b / (2 * a)
         y = m * x + c
         return (x, y)
     else:
         # 两个交点
+        print("两个交点")
         sqrt_disc = np.sqrt(delta)
         x2 = (-b + sqrt_disc) / (2 * a)
         x1 = (-b - sqrt_disc) / (2 * a)
         return (x1, m * x1 + c), (x2, m * x2 + c)
 
 #直线拟合器
-def linear_fit(start,end):
+def linear_fit(start,end,df):
     # 读取数据
-    x,z=data_reader(start,end)
+    x,z=data_reader(start,end,df)
+
     # 计算线性拟合参数
     slope, intercept, r_value, p_value, std_err = stats.linregress(x, z)
     angle_rad,angle_deg=angle_cal(slope)
@@ -132,9 +136,9 @@ def linear_fit(start,end):
     return (slope,-1,intercept)
 
 #弧线拟合器
-def arc_fit(start,end):
+def arc_fit(start,end,df):
     # 读取数据
-    x,z=data_reader(start,end)
+    x,z=data_reader(start,end,df)
     # 初始参数估计
     # 使用数据的质心作为圆心初始估计
     h0 = np.mean(x)
@@ -176,16 +180,16 @@ def arc_fit(start,end):
     return (h_fit, k_fit, r_fit)
 
 #混合拟合器
-def mixed_fit(start,end,target_z1,target_z2,target_z3):
+def mixed_fit(start,end,target_z1,target_z2,target_z3,df):
     #获取区间
-    x,z=data_reader(start,(start+end)/2)
+    x,z=data_reader(start,(start+end)/2,df)
     # 获取原始数据的全局索引
     start_idx = np.searchsorted(df['x'], start+0.2, side='left')
     idx1 = start_idx + np.argmin(np.abs(z - target_z1))
     idx2 = start_idx + np.argmin(np.abs(z - target_z2))
     idx3 = start_idx + np.argmin(np.abs(z - target_z3))
 
-    x, z = data_reader((start + end) / 2,end)
+    x, z = data_reader((start + end) / 2,end,df)
     mid_idx = np.searchsorted(df['x'], (start+end)/2+0.2, side='left')
     idx6 = mid_idx + np.argmin(np.abs(z - target_z1))
     idx5 = mid_idx + np.argmin(np.abs(z - target_z2))
@@ -193,30 +197,30 @@ def mixed_fit(start,end,target_z1,target_z2,target_z3):
 
     #左侧直线拟合
     print(f"左侧直线区间的拟合结果：")
-    mixed_line1=linear_fit(df['x'][idx1],df['x'][idx2])
+    mixed_line1=linear_fit(df['x'][idx1],df['x'][idx2],df)
 
     #右侧直线拟合
     print(f"右侧直线区间的拟合结果：")
-    mixed_line2=linear_fit(df['x'][idx5],df['x'][idx6])
+    mixed_line2=linear_fit(df['x'][idx5],df['x'][idx6],df)
 
     #中间弧线拟合
     print(f"中间弧线区间的拟合结果：")
-    mixed_arc=arc_fit(df['x'][idx3],df['x'][idx4])
+    mixed_arc=arc_fit(df['x'][idx3],df['x'][idx4],df)
 
     return mixed_line1,mixed_line2,mixed_arc
 
-def plot_all_results():
+def plot_all_results(df):
     plt.figure(figsize=(24, 10))
 
     # 1. 绘制原始数据
-    plt.plot(df['x'], df['z'], color='gray', linewidth=3, label='原始数据')
+    plt.plot(df['x'], df['z'], color='gray', linewidth=5, label='原始数据')
 
     # 2. 绘制所有直线段拟合曲线
     def plot_fitted_line(line,start,end,line_name,color='skyblue'):
         slope, _, intercept = line
         x_fit = np.linspace(start, end, 100)
         y_fit = slope * x_fit + intercept
-        plt.plot(x_fit, y_fit, color=color, linestyle='--', linewidth=2, label=line_name)
+        plt.plot(x_fit, y_fit, color=color, linestyle='--', linewidth=3, label=line_name)
 
     plot_fitted_line(line1,df['x'][0],turning_dict['a1'],'line1')
     plot_fitted_line(line2,turning_dict['a2'],turning_dict['a3'],'line2')
@@ -243,9 +247,9 @@ def plot_all_results():
         theta = np.linspace(0, 2 * np.pi, 100)
         x = h + r * np.cos(theta)
         y = k + r * np.sin(theta)
-        plt.plot(x, y, color=color, linestyle='--', linewidth=2, label=label)
+        plt.plot(x, y, color=color, linestyle='--', linewidth=3, label=label)
         plt.scatter(h, k, color='salmon', s=20)
-        plt.text(h, k+0.12, name, fontsize=15, ha='center')
+        plt.text(h, k+0.12, name, fontsize=20, ha='center')
 
     # 绘制所有弧线
     plot_full_circle(arc1, 'pink', 'arc1','O4')
@@ -263,20 +267,20 @@ def plot_all_results():
             plt.scatter(turning_dict[f'a{i}'], turning_dict[f'b{i}'], color='black', s=20, zorder=10)
             if i in [18,20,22]:  # 左侧点向左偏移
                 plt.text(turning_dict[f'a{i}']-0.1, turning_dict[f'b{i}'],
-                         f'a{i}', fontsize=15, ha='right')
+                         f'a{i}', fontsize=20, ha='right')
             elif i in [19,21,23]:  # 右侧点向右偏移
                 plt.text(turning_dict[f'a{i}']+0.1, turning_dict[f'b{i}'],
-                         f'a{i}', fontsize=15, ha='left')
+                         f'a{i}', fontsize=20, ha='left')
             else:  # 其他点保持原样
                 plt.text(turning_dict[f'a{i}'], turning_dict[f'b{i}'] + 0.05,
-                         f'a{i}', fontsize=15, ha='center')
+                         f'a{i}', fontsize=20, ha='center')
 
 
     # 5. 添加图例和标签
     plt.legend(fontsize=15, loc='upper right')
-    plt.title('工件1_level_fit', fontsize=20)
-    plt.xlabel('x坐标', fontsize=16)
-    plt.ylabel('z坐标', fontsize=16)
+    plt.title('工件1_level_fit', fontsize=24)
+    plt.xlabel('x坐标', fontsize=20)
+    plt.ylabel('z坐标', fontsize=20)
     plt.grid(True, linestyle='--', alpha=0.7)
     plt.tight_layout()
 
@@ -309,11 +313,11 @@ if __name__ == '__main__':
 
     #绘图
     plt.figure(figsize=(24,10))
-    plt.plot(df['x'],df['z'],color='gray',linewidth=3)
+    plt.plot(df['x'],df['z'],color='gray',linewidth=5)
     #添加转折点
     plt.scatter(turning_points_x, turning_points_z, color='gray')
     for i in range(len(turning_points)):
-        plt.text(turning_points_x[i],turning_points_z[i]+0.08,f'a{i+1}',fontsize=15)
+        plt.text(turning_points_x[i],turning_points_z[i]+0.08,f'a{i+1}',fontsize=20)
     plt.title('工件1的测量数据')
     plt.xlabel('x')
     plt.ylabel('z')
@@ -325,27 +329,27 @@ if __name__ == '__main__':
 
     #直线区段拟合
     print("区间[,a1]的拟合结果")
-    line1=linear_fit(df['x'][0],turning_dict['a1'])
+    line1=linear_fit(df['x'][0],turning_dict['a1'],df)
     print('区间[a2,a3]的拟合结果：')
-    line2=linear_fit(turning_dict['a2'],turning_dict['a3'])
+    line2=linear_fit(turning_dict['a2'],turning_dict['a3'],df)
     print('区间[a4,a5]的拟合结果：')
-    line3=linear_fit(turning_dict['a4'],turning_dict['a5'])
+    line3=linear_fit(turning_dict['a4'],turning_dict['a5'],df)
     print('区间[a6,a7]的拟合结果：')
-    line4=linear_fit(turning_dict['a6'],turning_dict['a7'])
+    line4=linear_fit(turning_dict['a6'],turning_dict['a7'],df)
     print('区间[a7,a8]的拟合结果：')
-    line5=linear_fit(turning_dict['a7'],turning_dict['a8'])
+    line5=linear_fit(turning_dict['a7'],turning_dict['a8'],df)
     print('区间[a8,a9]的拟合结果：')
-    line6=linear_fit(turning_dict['a8'],turning_dict['a9'])
+    line6=linear_fit(turning_dict['a8'],turning_dict['a9'],df)
     print('区间[a9,a10]的拟合结果：')
-    line7=linear_fit(turning_dict['a9'],turning_dict['a10'])
+    line7=linear_fit(turning_dict['a9'],turning_dict['a10'],df)
     print('区间[a11,a12]的拟合结果：')
-    line8=linear_fit(turning_dict['a11'],turning_dict['a12'])
+    line8=linear_fit(turning_dict['a11'],turning_dict['a12'],df)
     print('区间[a13,a14]的拟合结果：')
-    line9=linear_fit(turning_dict['a13'],turning_dict['a14'])
+    line9=linear_fit(turning_dict['a13'],turning_dict['a14'],df)
     print('区间[a15,a16]的拟合结果：')
-    line10=linear_fit(turning_dict['a15'],turning_dict['a16'])
+    line10=linear_fit(turning_dict['a15'],turning_dict['a16'],df)
     print("区间[a17,]的拟合结果：")
-    line11=linear_fit(turning_dict['a17'],df['x'].iloc[-1])
+    line11=linear_fit(turning_dict['a17'],df['x'].iloc[-1],df)
 
     #更新转折点坐标
     point=line_intersection(line4, line5)
@@ -363,21 +367,21 @@ if __name__ == '__main__':
 
     #弧线区段拟合
     print('区间[a10,a11]的拟合结果：')
-    arc1=arc_fit(turning_dict['a10'],turning_dict['a11'])
+    arc1=arc_fit(turning_dict['a10'],turning_dict['a11'],df)
     print('区间[a12,a13]的拟合结果：')
-    arc2=arc_fit(turning_dict['a12'],turning_dict['a13'])
+    arc2=arc_fit(turning_dict['a12'],turning_dict['a13'],df)
     print('区间[a14,a15]的拟合结果：')
-    arc3=arc_fit(turning_dict['a14'],turning_dict['a15'])
+    arc3=arc_fit(turning_dict['a14'],turning_dict['a15'],df)
     print('区间[a16,a17]的拟合结果：')
-    arc4=arc_fit(turning_dict['a16'],turning_dict['a17'])
+    arc4=arc_fit(turning_dict['a16'],turning_dict['a17'],df)
 
     #混合区段拟合
     print('区间[a1,a2]的拟合结果：')
-    mixed_line1, mixed_line2, mixed_arc1=mixed_fit(turning_dict['a1'],turning_dict['a2'],-1.9,-3.8,-4.3)
+    mixed_line1, mixed_line2, mixed_arc1=mixed_fit(turning_dict['a1'],turning_dict['a2'],-1.9,-3.8,-4.3,df)
     print('区间[a3,a4]的拟合结果：')
-    mixed_line3, mixed_line4, mixed_arc2=mixed_fit(turning_dict['a3'],turning_dict['a4'],-2.1,-4.2,-4.3)
+    mixed_line3, mixed_line4, mixed_arc2=mixed_fit(turning_dict['a3'],turning_dict['a4'],-2.1,-4.2,-4.3,df)
     print('区间[a5,a6]的拟合结果：')
-    mixed_line5, mixed_line6, mixed_arc3=mixed_fit(turning_dict['a5'],turning_dict['a6'],-2.1,-4.0,-4.2)
+    mixed_line5, mixed_line6, mixed_arc3=mixed_fit(turning_dict['a5'],turning_dict['a6'],-2.1,-4.0,-4.2,df)
 
     # 更新转折点坐标
     point=line_intersection(line1,mixed_line1 )
@@ -454,4 +458,4 @@ if __name__ == '__main__':
         print(f'O{i}=({h:.8f},{k:.8f}) 半径={r:.8f}')
 
     #绘制总图
-    plot_all_results()
+    plot_all_results(df)
