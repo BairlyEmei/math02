@@ -16,14 +16,14 @@ def angle_search(*lines):
     slopes = [line[0] for line in lines]
     return np.mean([math.atan(s) for s in slopes])
 
-def coordinate_tranaform(df,angle):
+def coordinate_transform(df,angle,save_path='Figures/工件1_down_new.xlsx'):
     df['x_new'] = df['x'] * np.cos(angle) - df['z'] * np.sin(angle)
     df['z_new'] = df['x'] * np.sin(angle) + df['z'] * np.cos(angle)
     df['x'] = df['x_new'].round(8)
     df['z'] = df['z_new'].round(8)
 
     df.drop(columns=['x_new', 'z_new'], inplace=True)
-    df.to_excel('Figures/工件1_down_new.xlsx', sheet_name='down', index=False)
+    df.to_excel(save_path, sheet_name='down', index=False)
     return df
 
 def plot_all_results(df):
@@ -160,7 +160,7 @@ if __name__ == '__main__':
     print(f'angle= {angle}')
 
     # 坐标变换
-    df = coordinate_tranaform(df, angle)
+    df = coordinate_transform(df, angle)
 
     # 计算新的转折点坐标
     turning_points_x_new = []

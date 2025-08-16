@@ -17,12 +17,12 @@ plt.rcParams['axes.unicode_minus'] = False
 os.makedirs('Figures', exist_ok=True)
 
 #区间数据读取器
-def data_reader(start,end,df):
+def data_reader(start,end,df, epsilon):
     # 读取数据
     x = df['x']
     #选取区间内部的点
-    start_idx = np.searchsorted(x, start+0.2, side='left')
-    end_idx = np.searchsorted(x, end-0.2, side='right')
+    start_idx = np.searchsorted(x, start+epsilon, side='left')
+    end_idx = np.searchsorted(x, end-epsilon, side='right')
     x = df['x'].iloc[start_idx:end_idx + 1].values
     z = df['z'].iloc[start_idx:end_idx + 1].values
     return x,z
@@ -111,9 +111,9 @@ def line_circle_intersection(line, circle, tol=0.7):
         return (x1, m * x1 + c), (x2, m * x2 + c)
 
 #直线拟合器
-def linear_fit(start,end,df):
+def linear_fit(start,end,df, epsilon=0.2):
     # 读取数据
-    x,z=data_reader(start,end,df)
+    x,z=data_reader(start,end,df, epsilon)
 
     # 计算线性拟合参数
     slope, intercept, r_value, p_value, std_err = stats.linregress(x, z)
@@ -136,9 +136,9 @@ def linear_fit(start,end,df):
     return (slope,-1,intercept)
 
 #弧线拟合器
-def arc_fit(start,end,df):
+def arc_fit(start,end,df, epsilon=0.2):
     # 读取数据
-    x,z=data_reader(start,end,df)
+    x,z=data_reader(start,end,df, epsilon)
     # 初始参数估计
     # 使用数据的质心作为圆心初始估计
     h0 = np.mean(x)
@@ -180,9 +180,9 @@ def arc_fit(start,end,df):
     return (h_fit, k_fit, r_fit)
 
 #混合拟合器
-def mixed_fit(start,end,target_z1,target_z2,target_z3,df):
+def mixed_fit(start,end,target_z1,target_z2,target_z3,df, epsilon=0.2):
     #获取区间
-    x,z=data_reader(start,(start+end)/2,df)
+    x,z=data_reader(start,(start+end)/2,df, epsilon)
     # 获取原始数据的全局索引
     start_idx = np.searchsorted(df['x'], start+0.2, side='left')
     idx1 = start_idx + np.argmin(np.abs(z - target_z1))
