@@ -2,6 +2,7 @@
 <project version="4">
   <component name="com.codeverse.userSettings.MarscodeWorkspaceAppSettingsState">
     <option name="chatAppRouterInfo" value="builder/68a0ac42c0c040b5a6b13cea" />
-    <option name="ckgOperationStatus" value="CONFIRM" />
+    <option name="ckgOperationStatus" value="SUCCESS" />
+    <option name="progress" value="0.95454544" />
   </component>
 </project>
